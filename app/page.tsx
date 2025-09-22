@@ -2,12 +2,22 @@
 
 import { Suspense, useState, useEffect } from "react"
 import dynamic from "next/dynamic"
+import GameUI from "@/components/game/GameUI"
+import PlayerController from "@/components/game/PlayerController"
+import InteractableObject from "@/components/game/InteractableObject"
 
 const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => ({ default: mod.Canvas })), { ssr: false })
 const Physics = dynamic(() => import("@react-three/cannon").then((mod) => ({ default: mod.Physics })), { ssr: false })
 
-// Simple 3D components without external dependencies
-function FloatingIsland() {
+function FloatingIsland({
+  onResourceCollect,
+  onNPCInteract,
+  onObjectInteract,
+}: {
+  onResourceCollect?: (type: string, amount: number) => void
+  onNPCInteract?: (npcId: string) => void
+  onObjectInteract?: (objectId: string) => void
+}) {
   return (
     <group>
       {/* Main island platform */}
@@ -22,97 +32,131 @@ function FloatingIsland() {
         <meshLambertMaterial color="#6b8e23" />
       </mesh>
 
-      {/* Trees */}
+      {/* Trees - Interactive resource nodes */}
       {Array.from({ length: 8 }, (_, i) => {
         const angle = (i / 8) * Math.PI * 2
         const radius = 4 + Math.random() * 2
         const x = Math.cos(angle) * radius
         const z = Math.sin(angle) * radius
         return (
-          <group key={i} position={[x, 1, z]}>
-            {/* Tree trunk */}
+          <InteractableObject
+            key={`tree-${i}`}
+            type="tree"
+            position={[x, 1, z]}
+            onInteract={(type, data) => {
+              if (data?.resource && onResourceCollect) {
+                onResourceCollect(data.resource, data.amount)
+              }
+            }}
+          >
             <mesh position={[0, 1, 0]} castShadow>
               <cylinderGeometry args={[0.2, 0.3, 2]} />
               <meshLambertMaterial color="#8b4513" />
             </mesh>
-            {/* Tree leaves */}
             <mesh position={[0, 2.5, 0]} castShadow>
               <sphereGeometry args={[1.2]} />
               <meshLambertMaterial color="#228b22" />
             </mesh>
-          </group>
+          </InteractableObject>
         )
       })}
 
-      {/* Rocks */}
+      {/* Rocks - Interactive resource nodes */}
       {Array.from({ length: 6 }, (_, i) => {
         const angle = (i / 6) * Math.PI * 2 + Math.PI / 6
         const radius = 2 + Math.random() * 1.5
         const x = Math.cos(angle) * radius
         const z = Math.sin(angle) * radius
         return (
-          <mesh key={i} position={[x, 0.3, z]} castShadow>
-            <dodecahedronGeometry args={[0.5]} />
-            <meshLambertMaterial color="#696969" />
-          </mesh>
+          <InteractableObject
+            key={`rock-${i}`}
+            type="rock"
+            position={[x, 0.3, z]}
+            onInteract={(type, data) => {
+              if (data?.resource && onResourceCollect) {
+                onResourceCollect(data.resource, data.amount)
+              }
+            }}
+          >
+            <mesh castShadow>
+              <dodecahedronGeometry args={[0.5]} />
+              <meshLambertMaterial color="#696969" />
+            </mesh>
+          </InteractableObject>
         )
       })}
 
-      {/* Crystals */}
+      {/* Crystals - Rare interactive resource nodes */}
       {Array.from({ length: 4 }, (_, i) => {
         const angle = (i / 4) * Math.PI * 2 + Math.PI / 4
         const radius = 1 + Math.random()
         const x = Math.cos(angle) * radius
         const z = Math.sin(angle) * radius
         return (
-          <mesh key={i} position={[x, 0.8, z]} castShadow>
-            <octahedronGeometry args={[0.4]} />
-            <meshLambertMaterial color="#9370db" emissive="#4b0082" emissiveIntensity={0.2} />
-          </mesh>
+          <InteractableObject
+            key={`crystal-${i}`}
+            type="crystal"
+            position={[x, 0.8, z]}
+            onInteract={(type, data) => {
+              if (data?.resource && onResourceCollect) {
+                onResourceCollect(data.resource, data.amount)
+              }
+            }}
+          >
+            <mesh castShadow>
+              <octahedronGeometry args={[0.4]} />
+              <meshLambertMaterial color="#9370db" emissive="#4b0082" emissiveIntensity={0.2} />
+            </mesh>
+          </InteractableObject>
         )
       })}
-    </group>
-  )
-}
 
-function Player({ position = [0, 1, 5] }) {
-  return (
-    <group position={position}>
-      {/* Player body */}
-      <mesh position={[0, 0.5, 0]} castShadow>
-        <capsuleGeometry args={[0.3, 1]} />
-        <meshLambertMaterial color="#ff6b6b" />
-      </mesh>
-      {/* Player head */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <sphereGeometry args={[0.25]} />
-        <meshLambertMaterial color="#ffdbac" />
-      </mesh>
-    </group>
-  )
-}
+      {/* NPCs - Simple character models */}
+      <InteractableObject
+        type="npc"
+        position={[3, 1, 3]}
+        onInteract={(type, data) => {
+          if (onNPCInteract) {
+            onNPCInteract(data?.npcId || "trader")
+          }
+        }}
+      >
+        <mesh position={[0, 0.5, 0]} castShadow>
+          <capsuleGeometry args={[0.3, 1]} />
+          <meshLambertMaterial color="#4169E1" />
+        </mesh>
+        <mesh position={[0, 1.2, 0]} castShadow>
+          <sphereGeometry args={[0.25]} />
+          <meshLambertMaterial color="#ffdbac" />
+        </mesh>
+        <mesh position={[0, 2, 0]}>
+          <sphereGeometry args={[0.1]} />
+          <meshBasicMaterial color="#FFD700" />
+        </mesh>
+      </InteractableObject>
 
-function SimpleGameUI({
-  inventory,
-  health,
-  stamina,
-}: {
-  inventory: { wood: number; stone: number; crystal: number }
-  health: number
-  stamina: number
-}) {
-  return (
-    <div className="absolute top-4 left-4 bg-black/50 text-white p-4 rounded-lg">
-      <div className="space-y-2">
-        <div>Health: {health}/100</div>
-        <div>Stamina: {stamina}/100</div>
-        <div className="border-t pt-2">
-          <div>Wood: {inventory.wood}</div>
-          <div>Stone: {inventory.stone}</div>
-          <div>Crystal: {inventory.crystal}</div>
-        </div>
-      </div>
-    </div>
+      {/* Interactive objects - Treasure chest */}
+      <InteractableObject
+        type="chest"
+        position={[-3, 0.5, -3]}
+        onInteract={(type, data) => {
+          if (data?.rewards && onResourceCollect) {
+            data.rewards.forEach((reward: any) => {
+              onResourceCollect(reward.resource, reward.amount)
+            })
+          }
+        }}
+      >
+        <mesh castShadow>
+          <boxGeometry args={[1, 0.6, 0.8]} />
+          <meshLambertMaterial color="#8B4513" />
+        </mesh>
+        <mesh position={[0.4, 0, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, 0.2]} />
+          <meshLambertMaterial color="#FFD700" />
+        </mesh>
+      </InteractableObject>
+    </group>
   )
 }
 
@@ -122,6 +166,7 @@ export default function GamePage() {
   const [stamina, setStamina] = useState(100)
   const [gameTime, setGameTime] = useState(720) // Start at noon
   const [isClient, setIsClient] = useState(false)
+  const [playerName] = useState("Adventurer")
 
   useEffect(() => {
     setIsClient(true)
@@ -167,6 +212,25 @@ export default function GamePage() {
     }
   }
 
+  const handleResourceCollect = (type: string, amount: number) => {
+    setInventory((prev) => ({
+      ...prev,
+      [type]: (prev[type as keyof typeof prev] || 0) + amount,
+    }))
+
+    // Show collection feedback
+    console.log(`[v0] Collected ${amount} ${type}`)
+  }
+
+  const handleNPCInteract = (npcId: string) => {
+    console.log(`[v0] Talking to NPC: ${npcId}`)
+    // Could open dialogue system here
+  }
+
+  const handleObjectInteract = (objectId: string) => {
+    console.log(`[v0] Interacting with: ${objectId}`)
+  }
+
   if (!isClient) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -208,28 +272,31 @@ export default function GamePage() {
           <fog attach="fog" args={[getBackgroundColor(), 20, 100]} />
 
           <Physics gravity={[0, -30, 0]}>
-            <FloatingIsland />
-            <Player />
+            <FloatingIsland
+              onResourceCollect={handleResourceCollect}
+              onNPCInteract={handleNPCInteract}
+              onObjectInteract={handleObjectInteract}
+            />
+            <PlayerController
+              onResourceCollect={handleResourceCollect}
+              onNPCInteract={handleNPCInteract}
+              onObjectInteract={handleObjectInteract}
+            />
           </Physics>
         </Suspense>
       </Canvas>
 
-      <SimpleGameUI inventory={inventory} health={health} stamina={stamina} />
-
-      <div className="absolute top-4 right-4 bg-black/50 text-white p-4 rounded-lg">
-        <div>
-          Time: {Math.floor(hour)}:{String(gameTime % 60).padStart(2, "0")}
-        </div>
-        <div>Phase: {dayPhase}</div>
-      </div>
-
-      <div className="absolute bottom-4 left-4 bg-black/50 text-white p-4 rounded-lg">
-        <div className="text-sm">
-          <div>WASD - Move around</div>
-          <div>Mouse - Look around</div>
-          <div>Click - Interact with objects</div>
-        </div>
-      </div>
+      <GameUI
+        playerName={playerName}
+        inventory={inventory}
+        health={health}
+        stamina={stamina}
+        gameTime={gameTime}
+        dayPhase={dayPhase}
+        onHealthChange={setHealth}
+        onStaminaChange={setStamina}
+        onInventoryUpdate={setInventory}
+      />
     </div>
   )
 }
