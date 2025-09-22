@@ -41,10 +41,15 @@ export default function PlayerController({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      console.log("[v0] Key pressed:", e.key, e.code) // Added debug logging
       const key = e.key.toLowerCase()
-      if (key in keys.current) {
-        keys.current[key as keyof typeof keys.current] = true
-      }
+
+      if (key === "w" || e.code === "KeyW") keys.current.w = true
+      if (key === "a" || e.code === "KeyA") keys.current.a = true
+      if (key === "s" || e.code === "KeyS") keys.current.s = true
+      if (key === "d" || e.code === "KeyD") keys.current.d = true
+      if (key === "shift" || e.code === "ShiftLeft" || e.code === "ShiftRight") keys.current.shift = true
+      if (key === " " || e.code === "Space") keys.current.space = true // Fixed space key detection
 
       // Interaction keys
       if (key === "e") {
@@ -53,10 +58,15 @@ export default function PlayerController({
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      console.log("[v0] Key released:", e.key, e.code) // Added debug logging
       const key = e.key.toLowerCase()
-      if (key in keys.current) {
-        keys.current[key as keyof typeof keys.current] = false
-      }
+
+      if (key === "w" || e.code === "KeyW") keys.current.w = false
+      if (key === "a" || e.code === "KeyA") keys.current.a = false
+      if (key === "s" || e.code === "KeyS") keys.current.s = false
+      if (key === "d" || e.code === "KeyD") keys.current.d = false
+      if (key === "shift" || e.code === "ShiftLeft" || e.code === "ShiftRight") keys.current.shift = false
+      if (key === " " || e.code === "Space") keys.current.space = false // Fixed space key detection
     }
 
     const handleClick = () => {
@@ -69,6 +79,7 @@ export default function PlayerController({
 
     const handlePointerLockChange = () => {
       isPointerLocked.current = document.pointerLockElement === gl.domElement
+      console.log("[v0] Pointer lock changed:", isPointerLocked.current) // Added debug logging
     }
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -121,6 +132,10 @@ export default function PlayerController({
     const direction = new THREE.Vector3()
     const speed = keys.current.shift ? 8 : 5
 
+    if (keys.current.w || keys.current.a || keys.current.s || keys.current.d) {
+      console.log("[v0] Movement keys active:", keys.current)
+    }
+
     if (keys.current.w) direction.z -= 1
     if (keys.current.s) direction.z += 1
     if (keys.current.a) direction.x -= 1
@@ -132,10 +147,13 @@ export default function PlayerController({
     direction.multiplyScalar(speed)
 
     // Apply movement
-    api.velocity.set(direction.x, velocity.current[1], direction.z)
+    if (direction.length() > 0) {
+      api.velocity.set(direction.x, velocity.current[1], direction.z)
+    }
 
     // Jump
     if (keys.current.space && Math.abs(velocity.current[1]) < 0.1) {
+      console.log("[v0] Jump triggered") // Added debug logging
       api.velocity.set(velocity.current[0], 10, velocity.current[2])
     }
 
