@@ -501,10 +501,10 @@ function ModernGameWorld() {
           }
         }}
         onNPCInteract={(npcId) => {
-          console.log("[v0] NPC interaction:", npcId)
+          console.log("NPC interaction:", npcId)
         }}
         onObjectInteract={(objectId) => {
-          console.log("[v0] Object interaction:", objectId)
+          console.log("Object interaction:", objectId)
         }}
       />
 
