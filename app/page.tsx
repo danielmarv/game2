@@ -6,6 +6,7 @@ import { GameProvider, useGame } from "@/hooks/useGameState"
 import ModernGameUI from "@/components/game/ModernGameUI"
 import LoadingScreen from "@/components/game/LoadingScreen"
 import PlayerController from "@/components/game/PlayerController"
+import { WalletConnectButton } from "@/components/wallet/wallet-connect-button"
 
 const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => ({ default: mod.Canvas })), { ssr: false })
 const Physics = dynamic(() => import("@react-three/cannon").then((mod) => ({ default: mod.Physics })), { ssr: false })
@@ -585,6 +586,10 @@ function GameContent() {
           </Physics>
         </Suspense>
       </Canvas>
+
+      <div className="absolute top-4 right-4 pr-60">
+        <WalletConnectButton />
+      </div>
 
       <ModernGameUI />
 
